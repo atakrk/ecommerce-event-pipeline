@@ -1,4 +1,4 @@
-"""Ürün referans verisini üretir → data/products.jsonl"""
+"""Generate product reference data -> data/products.jsonl"""
 import math
 import statistics
 
@@ -25,7 +25,7 @@ def generate_products(config):
     for i in range(1, products_cfg["count"] + 1):
         category = weighted_choice(rng, category_weights)
         bounds = categories[category]
-        # Log-uniform: ucuz ürünler pahalılardan daha sık, gerçek kataloglara benzer.
+        # Log-uniform: cheap products are more common than expensive ones, as in real catalogs.
         log_price = rng.uniform(math.log(bounds["price_min"]), math.log(bounds["price_max"]))
         yield {
             "product_id": f"P{i:05d}",
@@ -44,8 +44,8 @@ def main():
     products = list(generate_products(config))
     write_jsonl(path, products)
 
-    print(f"{len(products)} ürün → {path}")
-    print(f"  {'category':<12} {'adet':>6} {'min':>9} {'median':>9} {'max':>9}")
+    print(f"{len(products)} products -> {path}")
+    print(f"  {'category':<12} {'count':>6} {'min':>9} {'median':>9} {'max':>9}")
     for category in config["products"]["categories"]:
         prices = [p["price"] for p in products if p["category"] == category]
         if not prices:

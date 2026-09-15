@@ -11,7 +11,7 @@ $(VENV)/.installed: requirements.txt
 	$(PY) -m pip install -q -r requirements.txt
 	touch $@
 
-# Dosya zaten varsa atlar — referans veri bir kez üretilir.
+# Skips files that already exist — reference data is generated once.
 reference: venv
 	$(PY) -m reference.generate_users
 	$(PY) -m reference.generate_products

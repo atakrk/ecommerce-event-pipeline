@@ -6,8 +6,8 @@ paths:
 users:
   count: 10000
   created_at_range: {start: "2024-01-01", end: "2025-12-31"}
-  device_types: {mobile: 0.60, desktop: 0.30, tablet: 0.10}   # ağırlıklar
-  countries:                                                  # ağırlık + şehirler
+  device_types: {mobile: 0.60, desktop: 0.30, tablet: 0.10}   # weights
+  countries:                                                  # weight + cities
     TR: {weight: 0.40, cities: [Istanbul, Ankara, Izmir, Bursa, Antalya]}
     DE: {weight: 0.25, cities: [Berlin, Munich, Hamburg, Cologne]}
     GB: {weight: 0.20, cities: [London, Manchester, Birmingham]}
@@ -15,14 +15,14 @@ users:
 
 products:
   count: 1000
-  categories:                                                 # ağırlık + fiyat aralığı
+  categories:                                                 # weight + price range
     electronics: {weight: 0.20, price_min: 50, price_max: 2000}
     fashion:     {weight: 0.30, price_min: 10, price_max: 300}
     home:        {weight: 0.20, price_min: 15, price_max: 800}
     beauty:      {weight: 0.15, price_min: 5,  price_max: 150}
     sports:      {weight: 0.15, price_min: 10, price_max: 600}
 
-funnel:                        # Adım 2'de (event üretimi) kullanılacak
+funnel:                        # used in step 2 (event generation)
   view_to_add_to_cart: 0.25
   add_to_cart_to_checkout: 0.50
   checkout_to_purchase: 0.60

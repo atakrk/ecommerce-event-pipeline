@@ -1,4 +1,4 @@
-"""Kullanıcı referans verisini üretir → data/users.jsonl"""
+"""Generate user reference data -> data/users.jsonl"""
 from datetime import datetime, timedelta, timezone
 
 from reference.common import (
@@ -16,7 +16,7 @@ OUTPUT_FILE = "users.jsonl"
 
 
 def _parse_date(value):
-    # YAML tırnaksız tarihi date nesnesine çevirir; str() ile iki durumu da karşıla.
+    # YAML turns unquoted dates into date objects; str() handles both cases.
     return datetime.fromisoformat(str(value)).replace(tzinfo=timezone.utc)
 
 
@@ -28,7 +28,7 @@ def generate_users(config):
     country_weights = {code: c["weight"] for code, c in countries.items()}
 
     start = _parse_date(users_cfg["created_at_range"]["start"])
-    end = _parse_date(users_cfg["created_at_range"]["end"]) + timedelta(days=1)  # bitiş günü dahil
+    end = _parse_date(users_cfg["created_at_range"]["end"]) + timedelta(days=1)  # end date is inclusive
     last_second = int((end - start).total_seconds()) - 1
 
     for i in range(1, users_cfg["count"] + 1):
@@ -55,7 +55,7 @@ def main():
     users = list(generate_users(config))
     write_jsonl(path, users)
 
-    print(f"{len(users)} kullanıcı → {path}")
+    print(f"{len(users)} users -> {path}")
     print_distribution("country", (u["country"] for u in users))
     print_distribution("device_type", (u["device_type"] for u in users))
 

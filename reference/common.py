@@ -1,4 +1,4 @@
-"""Referans veri üreticilerinin ortak yardımcıları."""
+"""Shared helpers for the reference data generators."""
 import argparse
 import json
 import os
@@ -15,8 +15,8 @@ DEFAULT_CONFIG = PROJECT_ROOT / "config.yaml"
 
 def base_arg_parser(description):
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="config.yaml yolu")
-    parser.add_argument("--force", action="store_true", help="Var olan dosyanın üzerine yaz")
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="Path to config.yaml")
+    parser.add_argument("--force", action="store_true", help="Overwrite the existing output file")
     return parser
 
 
@@ -26,10 +26,10 @@ def load_config(path=DEFAULT_CONFIG):
 
 
 def rng_for(config, name):
-    """Her üretici için ayrı, deterministik RNG.
+    """Independent, deterministic RNG for each generator.
 
-    Seed `"<seed>:<name>"` olduğu için users ve products birbirinden bağımsızdır:
-    birinin config'ini değiştirmek diğerinin çıktısını kaydırmaz.
+    Seeding with `"<seed>:<name>"` keeps users and products independent:
+    changing one generator's config does not shift the other's output.
     """
     return random.Random(f"{config['seed']}:{name}")
 
@@ -44,15 +44,15 @@ def output_path(config, filename):
 
 
 def ensure_writable(path, force):
-    """Referans veri bir kez üretilir: dosya varsa --force olmadan dokunma."""
+    """Reference data is generated once: leave an existing file alone unless --force is given."""
     if path.exists() and not force:
-        print(f"{path} zaten var, atlanıyor. Yeniden üretmek için --force kullan.", file=sys.stderr)
+        print(f"{path} already exists, skipping. Use --force to regenerate.", file=sys.stderr)
         return False
     return True
 
 
 def write_jsonl(path, records):
-    """Önce .tmp'ye yazar, sonra atomik olarak taşır — yarım dosya kalmaz."""
+    """Write to a .tmp file first, then move it into place atomically so no partial file is left behind."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     try:

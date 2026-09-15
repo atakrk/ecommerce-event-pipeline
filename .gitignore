@@ -3,10 +3,10 @@
 __pycache__/
 *.pyc
 
-# OS / editör
+# OS / editor
 .DS_Store
 .claude/settings.local.json
 
-# Üretilen veri — config.yaml + seed ile yeniden üretilebilir
+# Generated data — reproducible from config.yaml + seed
 data/*
 !data/.gitkeep
