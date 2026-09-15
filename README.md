@@ -25,6 +25,7 @@ Other commands:
 | `make reference`       | Generates reference data; skips files that exist   |
 | `make reference-force` | Regenerates, overwriting existing files            |
 | `make events`          | Generates `data/events.jsonl` from the reference data |
+| `make verify`          | Checks `data/events.jsonl` against the configured funnel |
 | `make clean-data`      | Deletes `data/*.jsonl`                             |
 
 The scripts can also be run directly:
@@ -35,6 +36,8 @@ The scripts can also be run directly:
 
 .venv/bin/python -m generator.run [--config config.yaml] [--sessions 1000] \
                                   [--start 2026-09-01T00:00:00Z] [--seed N] > data/events.jsonl
+
+.venv/bin/python verify.py [--config config.yaml] [data/events.jsonl]
 ```
 
 `--seed` overrides the config seed for one-off experiments; the config value stays the default,
@@ -68,6 +71,32 @@ key and its value.
 | `product_id` | string | `"P00001"`      | Sequential, unique                                 |
 | `category`   | string | `"electronics"` | Weighted                                           |
 | `price`      | float  | `149.99`        | Log-uniform within the category range, 2 decimals  |
+
+## Verifying the output
+
+`verify.py` reads an event file and reports the observed funnel next to the configured one:
+
+```
+stage                        configured   observed     diff
+page_view_to_product_view         60.0%      61.1%     +1.1
+product_view_to_add_to_cart       15.0%      15.2%     +0.2
+add_to_cart_to_checkout           50.0%      67.7%    +17.7
+checkout_to_purchase              60.0%      57.1%     -2.9
+
+sessions 1000   events 1803   ordered by event_time: yes
+```
+
+The percentages are a report, not a verdict — they drift with sample size, and the later stages
+drift hardest because few sessions reach them. The `+17.7` above is 63 checkouts out of 93 carts;
+at 400,000 sessions the same stage lands on 50.6%.
+
+The structural checks *are* pass/fail. Any failure is written to stderr and exits non-zero:
+
+- every `session_id` has exactly one `PAGE_VIEW`, and it is the earliest event of that session
+- no session skips a stage — a `CHECKOUT` always has an `ADD_TO_CART` before it
+- every non-`PAGE_VIEW` event of a session carries the same `product_id`
+- `event_id` values are unique across the file
+- the file is sorted by `event_time`
 
 ## Event schema
 

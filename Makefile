@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV   := .venv
 PY     := $(VENV)/bin/python
 
-.PHONY: venv reference reference-force events clean-data
+.PHONY: venv reference reference-force events verify clean-data
 
 venv: $(VENV)/.installed
 
@@ -24,6 +24,10 @@ reference-force: venv
 # Pass generator options through, e.g. `make events ARGS="--sessions 5000"`.
 events: venv
 	$(PY) -m generator.run $(ARGS) > data/events.jsonl
+
+# Reports the observed funnel and fails on any structural problem.
+verify: venv
+	$(PY) verify.py $(ARGS)
 
 clean-data:
 	rm -f data/*.jsonl
