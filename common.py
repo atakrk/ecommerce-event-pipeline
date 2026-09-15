@@ -1,4 +1,4 @@
-"""Shared helpers for the reference data generators."""
+"""Shared helpers for the reference data and event generators."""
 import argparse
 import json
 import os
@@ -9,14 +9,19 @@ from pathlib import Path
 
 import yaml
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG = PROJECT_ROOT / "config.yaml"
 
 
-def base_arg_parser(description):
+def base_arg_parser(description, force=False):
+    """Argument parser with the options every generator shares.
+
+    `force` is opt-in: only generators that write a file in place can overwrite one.
+    """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="Path to config.yaml")
-    parser.add_argument("--force", action="store_true", help="Overwrite the existing output file")
+    if force:
+        parser.add_argument("--force", action="store_true", help="Overwrite the existing output file")
     return parser
 
 

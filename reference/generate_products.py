@@ -2,7 +2,7 @@
 import math
 import statistics
 
-from reference.common import (
+from common import (
     base_arg_parser,
     ensure_writable,
     load_config,
@@ -35,7 +35,7 @@ def generate_products(config):
 
 
 def main():
-    args = base_arg_parser(__doc__).parse_args()
+    args = base_arg_parser(__doc__, force=True).parse_args()
     config = load_config(args.config)
     path = output_path(config, OUTPUT_FILE)
     if not ensure_writable(path, args.force):
