@@ -22,7 +22,12 @@ products:
     beauty:      {weight: 0.15, price_min: 5,  price_max: 150}
     sports:      {weight: 0.15, price_min: 10, price_max: 600}
 
-funnel:                        # used in step 2 (event generation)
-  view_to_add_to_cart: 0.25
+# Used in step 2 (event generation).
+# Steps: page_view -> product_view -> add_to_cart -> checkout -> purchase
+# Each rate is the probability of moving on from the previous step.
+# Overall: ~9% of sessions add to cart, ~2.7% purchase.
+funnel:
+  page_view_to_product_view: 0.60
+  product_view_to_add_to_cart: 0.15
   add_to_cart_to_checkout: 0.50
   checkout_to_purchase: 0.60
