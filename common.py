@@ -5,12 +5,40 @@ import os
 import random
 import sys
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG = PROJECT_ROOT / "config.yaml"
+
+# Every timestamp the pipeline writes uses this shape: ISO 8601, UTC, "Z" suffix.
+# Fixed width means the strings also sort chronologically as plain text.
+INSTANT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+class ConfigError(ValueError):
+    """Invalid configuration or CLI argument, reported before any output is produced."""
+
+
+def parse_instant(value):
+    """Parse an ISO 8601 UTC instant. Raises ValueError on anything unparseable.
+
+    datetime.fromisoformat() does not accept the "Z" suffix before Python 3.11,
+    so it is translated here.
+    """
+    text = str(value).strip()
+    if text.endswith(("Z", "z")):
+        text = text[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def format_instant(moment):
+    return moment.strftime(INSTANT_FORMAT)
 
 
 def base_arg_parser(description, force=False):
@@ -56,14 +84,27 @@ def ensure_writable(path, force):
     return True
 
 
+def read_jsonl(path):
+    """Yield the records of a JSONL file, one per line."""
+    with Path(path).open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                yield json.loads(line)
+
+
+def write_jsonl_stream(stream, records):
+    for record in records:
+        stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def write_jsonl(path, records):
     """Write to a .tmp file first, then move it into place atomically so no partial file is left behind."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     try:
         with tmp.open("w", encoding="utf-8") as f:
-            for record in records:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            write_jsonl_stream(f, records)
         os.replace(tmp, path)
     except BaseException:
         tmp.unlink(missing_ok=True)

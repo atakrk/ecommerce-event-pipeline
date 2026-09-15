@@ -23,6 +23,10 @@ products:
     sports:      {weight: 0.15, price_min: 10, price_max: 600}
 
 # Used in step 2 (event generation).
+simulation:
+  start: "2026-09-01T00:00:00Z"  # first possible session start, ISO 8601 UTC; --start overrides it
+  window_hours: 24               # session start times are spread uniformly across this window
+
 # Steps: page_view -> product_view -> add_to_cart -> checkout -> purchase
 # Each rate is the probability of moving on from the previous step.
 # Overall: ~9% of sessions add to cart, ~2.7% purchase.
