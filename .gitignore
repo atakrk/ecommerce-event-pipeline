@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# OS / editör
+.DS_Store
+.claude/settings.local.json
+
+# Üretilen veri — config.yaml + seed ile yeniden üretilebilir
+data/*
+!data/.gitkeep
