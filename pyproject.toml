@@ -1,0 +1,41 @@
+[project]
+name = "ecommerce-event-pipeline"
+version = "0.1.0"
+description = "Synthetic ecommerce events, loaded, validated, and reported through a local DuckDB and dbt pipeline."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# duckdb, dbt-core, and dbt-duckdb stay on one minor version (spec 0001): every tool
+# that opens data/warehouse.duckdb must agree on the file format.
+dependencies = [
+    "dbt-core~=1.12.5",
+    "dbt-duckdb~=1.11.0",
+    "duckdb~=1.5.5",
+    "pyyaml>=6.0.3",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "ruff~=0.16.8",
+]
+
+[tool.uv]
+# Scripts run from the repo root (`uv run -m generator.run`); nothing is built or published.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".claude", "transform/dbt_packages", "transform/target"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common", "generator", "reference", "verify"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
