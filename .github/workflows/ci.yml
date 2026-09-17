@@ -1,0 +1,23 @@
+# Lint, test, and build on every push and pull request (spec 0001).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install Python and locked dependencies
+        run: uv sync --locked
+
+      - name: Lint, test, seeded generate + verify, dbt build
+        run: make check
