@@ -1,7 +1,7 @@
 # 0002. Load events and reference data into DuckDB, join them in dbt
 
 **Date**: 2026-09-17
-**Status**: In Progress
+**Status**: Accepted
 
 ## Summary
 

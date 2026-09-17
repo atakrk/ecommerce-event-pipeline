@@ -229,6 +229,21 @@ def test_force_loads_a_file_that_was_already_loaded(config_path, warehouse):
     ]
 
 
+def test_a_touched_file_is_still_a_duplicate(config_path, warehouse, data_dir):
+    # Identity is the bytes, not the path or the mtime, so a rewrite with the same
+    # contents is still a repeat. The other half of this rule is the test below.
+    load(config_path, warehouse)
+    events = data_dir / "events.jsonl"
+    events.write_text(events.read_text(encoding="utf-8"), encoding="utf-8")
+
+    load(config_path, warehouse)
+
+    assert query(warehouse, "select count(*) from raw.events") == [(2,)]
+    assert query(
+        warehouse, "select status from meta.load_files where load_id = 2 and file_kind = 'events'"
+    ) == [("skipped_duplicate",)]
+
+
 def test_changed_contents_are_loaded_again_without_force(config_path, warehouse, data_dir):
     load(config_path, warehouse)
     write_jsonl(data_dir / "events.jsonl", [*EVENTS, {"event_id": "E3"}])

@@ -1,0 +1,89 @@
+version: 2
+
+# Unit tests for the parse and cast rules the staging models apply to raw text.
+# Mocked raw lines let a malformed line be tested on purpose, which seeded generator
+# output never produces. The matching manual steps live in spec 0002's verify.md.
+
+unit_tests:
+  - name: test_stg_raw__events_drops_a_line_that_is_not_valid_json
+    description: >
+      covers: AC-10. Given a raw file holding one malformed line, when the staging
+      model is built, then the build completes and only the parseable line arrives.
+      json_extract_string raises on invalid JSON instead of returning null, so the
+      json_valid filter is what keeps one bad line from aborting the whole build.
+    model: stg_raw__events
+    given:
+      - input: source('raw', 'events')
+        rows:
+          - {load_id: 1, line_number: 1, source_file: /tmp/events.jsonl, raw_line: '{"event_id": "E1", "session_id": "S1", "user_id": "U1", "event_type": "PAGE_VIEW", "event_time": "2024-01-01 10:00:00", "product_id": "P1"}'}
+          - {load_id: 1, line_number: 2, source_file: /tmp/events.jsonl, raw_line: 'this line is not json'}
+    expect:
+      rows:
+        - {event_id: E1, session_id: S1, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-01 10:00:00", product_id: P1, load_id: 1, line_number: 1}
+
+  - name: test_stg_raw__events_separates_an_uncastable_time_from_a_json_null
+    description: >
+      covers: AC-10. Given one event whose event_time will not cast and one whose
+      event_time is JSON null, when the staging model is built, then the uncastable
+      row is dropped and the null one is kept with a null event_time. A value that
+      is present but wrong is a cast failure; an absent value is a semantic question
+      for feature 2's validation, so it is left for the not_null test to speak about.
+    model: stg_raw__events
+    given:
+      - input: source('raw', 'events')
+        rows:
+          - {load_id: 1, line_number: 1, source_file: /tmp/events.jsonl, raw_line: '{"event_id": "E_BAD_TIME", "session_id": "S1", "user_id": "U1", "event_type": "PAGE_VIEW", "event_time": "yesterday afternoon", "product_id": null}'}
+          - {load_id: 1, line_number: 2, source_file: /tmp/events.jsonl, raw_line: '{"event_id": "E_NULL_TIME", "session_id": "S1", "user_id": "U1", "event_type": "PAGE_VIEW", "event_time": null, "product_id": null}'}
+    expect:
+      rows:
+        - {event_id: E_NULL_TIME, event_time: null, load_id: 1, line_number: 2}
+
+  - name: test_stg_raw__events_keeps_every_copy_of_a_reloaded_event
+    description: >
+      covers: AC-10. Given the same event loaded twice, when the staging model is
+      built, then both copies are there. Staging stays one to one with raw on purpose,
+      so a row count gap means a parse or cast failure and nothing else. Deduplication
+      is fct_events' job, tested separately.
+    model: stg_raw__events
+    given:
+      - input: source('raw', 'events')
+        rows:
+          - {load_id: 1, line_number: 1, source_file: /tmp/events.jsonl, raw_line: '{"event_id": "E1", "session_id": "S1", "user_id": "U1", "event_type": "PAGE_VIEW", "event_time": "2024-01-01 10:00:00", "product_id": null}'}
+          - {load_id: 2, line_number: 1, source_file: /tmp/events.jsonl, raw_line: '{"event_id": "E1", "session_id": "S1", "user_id": "U1", "event_type": "PAGE_VIEW", "event_time": "2024-01-01 10:00:00", "product_id": null}'}
+    expect:
+      rows:
+        - {event_id: E1, load_id: 1, line_number: 1}
+        - {event_id: E1, load_id: 2, line_number: 1}
+
+  - name: test_stg_raw__users_keeps_every_loaded_version_of_a_user
+    description: >
+      covers: AC-4. Given one user loaded twice with a different country, when the
+      staging model is built, then both versions survive, each tagged with its load.
+      fct_events' asof join needs every version to pick from, so staging must not
+      collapse a user to its newest row.
+    model: stg_raw__users
+    given:
+      - input: source('raw', 'users')
+        rows:
+          - {load_id: 1, line_number: 1, source_file: /tmp/users.jsonl, raw_line: '{"user_id": "U1", "country": "TR", "city": "Istanbul", "device_type": "mobile", "created_at": "2023-01-01 00:00:00"}'}
+          - {load_id: 2, line_number: 1, source_file: /tmp/users.jsonl, raw_line: '{"user_id": "U1", "country": "DE", "city": "Berlin", "device_type": "mobile", "created_at": "2023-01-01 00:00:00"}'}
+    expect:
+      rows:
+        - {user_id: U1, country: TR, city: Istanbul, load_id: 1}
+        - {user_id: U1, country: DE, city: Berlin, load_id: 2}
+
+  - name: test_stg_raw__products_rounds_a_long_price_but_drops_a_non_numeric_one
+    description: >
+      covers: AC-10. Given one product priced '12.345' and one priced 'free', when
+      the staging model is built, then the first is kept rounded to 12.35 and the
+      second is dropped. The decimal cast rounds rather than rejects, so only a value
+      that is not a number at all counts as a cast failure.
+    model: stg_raw__products
+    given:
+      - input: source('raw', 'products')
+        rows:
+          - {load_id: 1, line_number: 1, source_file: /tmp/products.jsonl, raw_line: '{"product_id": "P1", "category": "electronics", "price": "12.345"}'}
+          - {load_id: 1, line_number: 2, source_file: /tmp/products.jsonl, raw_line: '{"product_id": "P_FREE", "category": "electronics", "price": "free"}'}
+    expect:
+      rows:
+        - {product_id: P1, category: electronics, price: 12.35, load_id: 1}

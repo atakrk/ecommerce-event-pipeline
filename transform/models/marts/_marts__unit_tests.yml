@@ -1,0 +1,92 @@
+version: 2
+
+# Unit tests for the logic `fct_events` adds on top of staging: the dedup window
+# function and the two asof joins. These run on mocked rows, so they pin the rules
+# themselves rather than whatever the seeded data happens to contain. The matching
+# manual steps live in spec 0002's verify.md.
+
+unit_tests:
+  - name: test_fct_events_resolves_references_as_of_the_load
+    description: >
+      covers: AC-4. Given a user whose country changed between two loads, when
+      fct_events is built, then an event from the earlier load keeps the old country
+      and an event from the later load gets the new one. This is the asof join's whole
+      reason for existing: the newest row must not rewrite history.
+    model: fct_events
+    given:
+      - input: ref('stg_raw__events')
+        rows:
+          - {event_id: E1, session_id: S1, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-01 10:00:00", product_id: null, load_id: 1, line_number: 1}
+          - {event_id: E2, session_id: S2, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-02 10:00:00", product_id: null, load_id: 2, line_number: 1}
+      - input: ref('stg_raw__users')
+        rows:
+          - {user_id: U1, country: TR, city: Istanbul, device_type: mobile, created_at: "2023-01-01 00:00:00", load_id: 1}
+          - {user_id: U1, country: DE, city: Berlin, device_type: desktop, created_at: "2023-01-01 00:00:00", load_id: 2}
+      - input: ref('stg_raw__products')
+        rows: []
+    expect:
+      rows:
+        - {event_id: E1, load_id: 1, user_country: TR, user_city: Istanbul, user_device_type: mobile}
+        - {event_id: E2, load_id: 2, user_country: DE, user_city: Berlin, user_device_type: desktop}
+
+  - name: test_fct_events_keeps_the_first_seen_copy_of_an_event
+    description: >
+      covers: AC-4. Given the same event_id loaded three times, when fct_events is
+      built, then one row survives: the lowest load_id, and within that load the
+      lowest line_number. Staging deliberately keeps every copy, so this is the only
+      place the grain is enforced.
+    model: fct_events
+    given:
+      - input: ref('stg_raw__events')
+        rows:
+          - {event_id: E1, session_id: S_LATER_LOAD, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-01 10:00:00", product_id: null, load_id: 2, line_number: 1}
+          - {event_id: E1, session_id: S_SAME_LOAD_LATER_LINE, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-01 10:00:00", product_id: null, load_id: 1, line_number: 5}
+          - {event_id: E1, session_id: S_FIRST_SEEN, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-01 10:00:00", product_id: null, load_id: 1, line_number: 2}
+      - input: ref('stg_raw__users')
+        rows: []
+      - input: ref('stg_raw__products')
+        rows: []
+    expect:
+      rows:
+        - {event_id: E1, session_id: S_FIRST_SEEN, load_id: 1}
+
+  - name: test_fct_events_keeps_an_event_whose_references_never_arrived
+    description: >
+      covers: AC-9. Given an event naming a user and a product that no reference row
+      has, when fct_events is built, then the event is still there with its reference
+      attributes null. A left join, not an inner one: a missing reference is a data
+      question, not a reason to drop the event.
+    model: fct_events
+    given:
+      - input: ref('stg_raw__events')
+        rows:
+          - {event_id: E1, session_id: S1, user_id: U_UNKNOWN, event_type: PRODUCT_VIEW, event_time: "2024-01-01 10:00:00", product_id: P_UNKNOWN, load_id: 1, line_number: 1}
+      - input: ref('stg_raw__users')
+        rows:
+          - {user_id: U_SOMEONE_ELSE, country: TR, city: Istanbul, device_type: mobile, created_at: "2023-01-01 00:00:00", load_id: 1}
+      - input: ref('stg_raw__products')
+        rows:
+          - {product_id: P_SOMETHING_ELSE, category: electronics, price: 10.0, load_id: 1}
+    expect:
+      rows:
+        - {event_id: E1, user_id: U_UNKNOWN, product_id: P_UNKNOWN, user_country: null, user_city: null, user_device_type: null, product_category: null, product_price: null}
+
+  - name: test_fct_events_ignores_a_reference_version_loaded_after_the_event
+    description: >
+      covers: AC-4. Given a user whose only version arrived in a later load than the
+      event, when fct_events is built, then the event keeps null attributes rather
+      than borrowing a version that did not exist yet. The asof bound is `>=`, so a
+      reference from the future never applies backwards.
+    model: fct_events
+    given:
+      - input: ref('stg_raw__events')
+        rows:
+          - {event_id: E1, session_id: S1, user_id: U1, event_type: PAGE_VIEW, event_time: "2024-01-01 10:00:00", product_id: null, load_id: 1, line_number: 1}
+      - input: ref('stg_raw__users')
+        rows:
+          - {user_id: U1, country: NL, city: Amsterdam, device_type: tablet, created_at: "2023-01-01 00:00:00", load_id: 2}
+      - input: ref('stg_raw__products')
+        rows: []
+    expect:
+      rows:
+        - {event_id: E1, load_id: 1, user_country: null, user_city: null, user_device_type: null}
