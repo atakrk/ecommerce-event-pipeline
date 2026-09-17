@@ -39,6 +39,12 @@ verify:
 load:
 	$(RUN) python -m pipeline.load $(ARGS)
 
+# Generated files to queryable marts, in one command. Two nested makes rather than
+# prerequisites, so the order holds even under `make -j`.
+pipeline:
+	$(MAKE) load
+	$(MAKE) dbt-build
+
 dbt-deps:
 	$(DBT) deps $(DBT_ARGS)
 
@@ -53,8 +59,11 @@ lint:
 test:
 	$(RUN) pytest
 
-# Everything CI runs: lint, tests, a small seeded generate + verify, then dbt build.
-# The seeded dataset is written to a temporary folder, so your data/ files stay untouched.
+# Everything CI runs: lint, tests, then the whole pipeline over a small seeded dataset.
+# Both the data and the warehouse live in a temporary folder, so data/ stays untouched.
+# The temp warehouse only survives while this one shell line runs, so the dbt build has
+# to happen inside it. `$(MAKE) dbt-build DBT_DUCKDB_PATH=...` overrides the path as a
+# command line variable: an environment variable would lose to the `:=` export above.
 check: lint test
 	@tmp=$$(mktemp -d) && trap 'rm -rf "$$tmp"' EXIT && \
 	sed "s#^  data_dir: .*#  data_dir: $$tmp#" config.yaml > $$tmp/config.yaml && \
@@ -65,9 +74,10 @@ check: lint test
 	$(RUN) python -m reference.generate_users --config $$tmp/config.yaml > /dev/null && \
 	$(RUN) python -m reference.generate_products --config $$tmp/config.yaml > /dev/null && \
 	$(RUN) python -m generator.run --config $$tmp/config.yaml --sessions $(CHECK_SESSIONS) \
-		> $$tmp/events.jsonl && \
-	$(RUN) python verify.py --config $$tmp/config.yaml
-	$(MAKE) dbt-build
+		--manifest $$tmp/events.manifest.json > $$tmp/events.jsonl && \
+	$(RUN) python verify.py --config $$tmp/config.yaml && \
+	$(RUN) python -m pipeline.load --config $$tmp/config.yaml --database $$tmp/warehouse.duckdb && \
+	$(MAKE) dbt-build DBT_DUCKDB_PATH=$$tmp/warehouse.duckdb
 
 clean-data:
 	rm -f data/*.jsonl data/events.manifest.json

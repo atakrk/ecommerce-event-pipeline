@@ -52,14 +52,14 @@ spec [0001](../specs/0001-pipeline-stack-architecture/index.md) · from spec 000
 ### 1. Event and reference data ingestion · in-progress
 Load events and reference data into a queryable store so later validation and analytics have something real to query, instead of scanning flat files by hand.
 **Done when:** a load command reads `data/events.jsonl`, `data/users.jsonl` and `data/products.jsonl` into a queryable store with each event joined to its user and product; running the load again on the same files does not create duplicate rows.
-spec [0002](../specs/0002-event-reference-data-ingestion/index.md)
+spec [0002](../specs/0002-event-reference-data-ingestion/index.md) · code in `pipeline/`, `transform/models/`, `transform/tests/`, `tests/test_load.py`
 - [x] Design it (spec): `/architect event and reference data ingestion`
-- [ ] Build it: `/develop event and reference data ingestion`
+- [x] Build it: `/develop event and reference data ingestion`
   - [x] Loader and `make load`: raw and meta tables, all three files, content hash skipping and `--force` (AC-1, AC-2, AC-3, AC-6, AC-7, AC-8)
   - [x] Generation manifest: `--manifest` on the generator, loaded into `meta.run_config` (AC-5)
   - [x] Loader test suite: unit tests plus end to end loads against a temporary warehouse (AC-1 to AC-8)
   - [x] dbt models: the `raw` source, the three staging models, `marts.fct_events`, and their tests (AC-4, AC-9, AC-10)
-  - [ ] `make pipeline` and CI: load then build, with `make check` using a temporary warehouse (AC-11)
+  - [x] `make pipeline` and CI: load then build, with `make check` using a temporary warehouse (AC-11)
 - [ ] Verify it: `/check verify event and reference data ingestion`
 - [ ] Test it: `/test event and reference data ingestion`
 

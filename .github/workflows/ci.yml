@@ -19,5 +19,5 @@ jobs:
       - name: Install Python and locked dependencies
         run: uv sync --locked
 
-      - name: Lint, test, seeded generate + verify, dbt build
+      - name: Lint, test, seeded generate + verify, load, dbt build
         run: make check
