@@ -14,7 +14,7 @@ _These are recommendations to keep your build orderly, not requirements. Skip an
 | A | Reference data generation | Existing | existing |
 | B | Event stream generator | Existing | existing |
 | C | Funnel structural verification | Existing | existing |
-| 0 | Stack and architecture | Release 1 | in-progress |
+| 0 | Stack and architecture | Release 1 | done |
 | 1 | Event and reference data ingestion | Release 1 | planned |
 | 2 | Schema validation on ingest | Release 1 | planned |
 | 3 | Funnel and conversion reporting | Release 1 | planned |
@@ -40,7 +40,7 @@ code in `verify.py`
 
 The thinnest usable whole: events land in a queryable store, bad records get caught on the way in, and the funnel report already known from `verify.py` becomes a real query instead of a one off script.
 
-### 0. Stack and architecture · in-progress
+### 0. Stack and architecture · done
 Move the repo onto the stack decided in spec 0001 (Python 3.12, uv, Ruff, pytest, CI, and an empty DuckDB and dbt skeleton) so every Release 1 feature starts from the same foundation.
 **Done when:** `uv sync` sets up Python 3.12 with locked dependencies, the existing `make reference`, `make events` and `make verify` still produce byte identical output for the same seed, Ruff and pytest pass locally and in GitHub Actions, and `dbt build` runs cleanly against `data/warehouse.duckdb` from an empty `transform/` project.
 spec [0001](../specs/0001-pipeline-stack-architecture/index.md) · from spec 0001 · code in `pyproject.toml`, `transform/`, `tests/`, `.github/workflows/`
