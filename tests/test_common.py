@@ -3,11 +3,22 @@
 uv run pytest tests/test_common.py
 """
 
+import random
 from datetime import UTC, datetime
 
 import pytest
 
-from common import format_instant, parse_instant, read_jsonl, rng_for, write_jsonl
+from common import (
+    ensure_writable,
+    format_instant,
+    load_config,
+    output_path,
+    parse_instant,
+    read_jsonl,
+    rng_for,
+    weighted_choice,
+    write_jsonl,
+)
 
 
 def test_parse_instant_accepts_z_suffix():
@@ -26,7 +37,9 @@ def test_parse_instant_strips_surrounding_whitespace():
     assert parse_instant(" 2026-09-01T00:00:00Z\n") == datetime(2026, 9, 1, tzinfo=UTC)
 
 
-@pytest.mark.parametrize("value", ["", "yesterday", "2026-13-01T00:00:00Z"])
+# The hand written "Z" handling was dropped for Python 3.12's native parser, which
+# accepts only an uppercase "Z". Every instant the pipeline writes uses uppercase.
+@pytest.mark.parametrize("value", ["", "yesterday", "2026-13-01T00:00:00Z", "2026-09-01T00:00:00z"])
 def test_parse_instant_rejects_unparseable_values(value):
     with pytest.raises(ValueError):
         parse_instant(value)
@@ -68,3 +81,59 @@ def test_write_jsonl_removes_tmp_file_on_failure(tmp_path):
         write_jsonl(path, broken())
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_ensure_writable_allows_a_new_file(tmp_path):
+    assert ensure_writable(tmp_path / "users.jsonl", force=False) is True
+
+
+def test_ensure_writable_skips_an_existing_file_and_says_so(tmp_path, capsys):
+    path = tmp_path / "users.jsonl"
+    path.write_text("{}\n", encoding="utf-8")
+
+    assert ensure_writable(path, force=False) is False
+    assert "already exists, skipping" in capsys.readouterr().err
+    assert path.read_text(encoding="utf-8") == "{}\n"
+
+
+def test_ensure_writable_overwrites_an_existing_file_with_force(tmp_path):
+    path = tmp_path / "users.jsonl"
+    path.write_text("{}\n", encoding="utf-8")
+    assert ensure_writable(path, force=True) is True
+
+
+def test_output_path_resolves_a_relative_data_dir_under_the_project(tmp_path):
+    path = output_path({"paths": {"data_dir": "data"}}, "users.jsonl")
+    assert path.parts[-2:] == ("data", "users.jsonl")
+    assert path.is_absolute()
+
+
+def test_output_path_keeps_an_absolute_data_dir(tmp_path):
+    assert output_path({"paths": {"data_dir": str(tmp_path)}}, "users.jsonl") == (
+        tmp_path / "users.jsonl"
+    )
+
+
+def test_load_config_reads_the_project_config():
+    config = load_config()
+    assert isinstance(config["seed"], int)
+    assert set(config) >= {"paths", "users", "products", "simulation", "funnel"}
+
+
+def test_weighted_choice_never_picks_a_zero_weight_key():
+    rng = random.Random(1)
+    picks = {weighted_choice(rng, {"never": 0, "always": 1}) for _ in range(200)}
+    assert picks == {"always"}
+
+
+def test_read_jsonl_skips_blank_lines(tmp_path):
+    path = tmp_path / "records.jsonl"
+    path.write_text('{"id": 1}\n\n   \n{"id": 2}\n', encoding="utf-8")
+    assert list(read_jsonl(path)) == [{"id": 1}, {"id": 2}]
+
+
+def test_read_jsonl_raises_on_a_malformed_line(tmp_path):
+    path = tmp_path / "records.jsonl"
+    path.write_text('{"id": 1}\nnot json\n', encoding="utf-8")
+    with pytest.raises(ValueError):
+        list(read_jsonl(path))

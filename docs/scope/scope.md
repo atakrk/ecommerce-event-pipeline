@@ -47,7 +47,7 @@ spec [0001](../specs/0001-pipeline-stack-architecture/index.md) · from spec 000
 - [x] Decide the stack (spec): `/architect stack & architecture`
 - [x] Scaffold from the decision: `/develop stack and architecture`
 - [x] Verify it: `/check verify stack and architecture`
-- [ ] Test it: `/test stack and architecture`
+- [x] Test it: `/test stack and architecture`
 
 ### 1. Event and reference data ingestion · needs a decision
 Load events and reference data into a queryable store so later validation and analytics have something real to query, instead of scanning flat files by hand.
