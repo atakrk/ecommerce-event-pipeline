@@ -43,9 +43,9 @@ The thinnest usable whole: events land in a queryable store, bad records get cau
 ### 0. Stack and architecture · in-progress
 Move the repo onto the stack decided in spec 0001 (Python 3.12, uv, Ruff, pytest, CI, and an empty DuckDB and dbt skeleton) so every Release 1 feature starts from the same foundation.
 **Done when:** `uv sync` sets up Python 3.12 with locked dependencies, the existing `make reference`, `make events` and `make verify` still produce byte identical output for the same seed, Ruff and pytest pass locally and in GitHub Actions, and `dbt build` runs cleanly against `data/warehouse.duckdb` from an empty `transform/` project.
-spec [0001](../specs/0001-pipeline-stack-architecture/index.md) · from spec 0001
+spec [0001](../specs/0001-pipeline-stack-architecture/index.md) · from spec 0001 · code in `pyproject.toml`, `transform/`, `tests/`, `.github/workflows/`
 - [x] Decide the stack (spec): `/architect stack & architecture`
-- [ ] Scaffold from the decision: `/develop stack and architecture`
+- [x] Scaffold from the decision: `/develop stack and architecture`
 - [ ] Verify it: `/check verify stack and architecture`
 - [ ] Test it: `/test stack and architecture`
 
