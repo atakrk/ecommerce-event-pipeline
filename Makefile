@@ -52,6 +52,10 @@ test:
 check: lint test
 	@tmp=$$(mktemp -d) && trap 'rm -rf "$$tmp"' EXIT && \
 	sed "s#^  data_dir: .*#  data_dir: $$tmp#" config.yaml > $$tmp/config.yaml && \
+	$(RUN) python -c "import sys, common; \
+		sys.exit(0 if common.load_config(sys.argv[1])['paths']['data_dir'] == sys.argv[2] \
+		else 'make check: could not point paths.data_dir at the temp folder; refusing to write data/')" \
+		$$tmp/config.yaml $$tmp && \
 	$(RUN) python -m reference.generate_users --config $$tmp/config.yaml > /dev/null && \
 	$(RUN) python -m reference.generate_products --config $$tmp/config.yaml > /dev/null && \
 	$(RUN) python -m generator.run --config $$tmp/config.yaml --sessions $(CHECK_SESSIONS) \
