@@ -202,6 +202,23 @@ def test_a_second_run_loads_nothing_but_still_records_itself(config_path, wareho
     assert statuses == [("skipped_duplicate",)]
 
 
+def test_two_files_with_the_same_contents_both_load(config_path, warehouse, data_dir):
+    # Same bytes under two kinds are two different inputs, so neither counts as a repeat.
+    same = [{"id": 1}]
+    write_jsonl(data_dir / "users.jsonl", same)
+    write_jsonl(data_dir / "products.jsonl", same)
+
+    assert load(config_path, warehouse) == 0
+
+    assert query(warehouse, "select count(*) from raw.users") == [(1,)]
+    assert query(warehouse, "select count(*) from raw.products") == [(1,)]
+    assert query(
+        warehouse,
+        "select status, line_count from meta.load_files "
+        "where file_kind in ('users', 'products') order by file_kind",
+    ) == [("loaded", 1), ("loaded", 1)]
+
+
 def test_force_loads_a_file_that_was_already_loaded(config_path, warehouse):
     load(config_path, warehouse)
     assert load(config_path, warehouse, "--force") == 0

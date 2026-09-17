@@ -204,9 +204,11 @@ def create_objects(connection, kinds):
         connection.execute(RAW_TABLE_DDL.format(kind=kind))
 
 
-def already_loaded(connection, digest):
+def already_loaded(connection, kind, digest):
+    """Identity is per kind: the same bytes under two kinds are two inputs, not a repeat."""
     found = connection.execute(
-        "select 1 from meta.load_files where content_sha256 = ? limit 1", [digest]
+        "select 1 from meta.load_files where file_kind = ? and content_sha256 = ? limit 1",
+        [kind, digest],
     ).fetchone()
     return found is not None
 
@@ -235,7 +237,7 @@ def insert_lines(connection, load_id, kind, path):
 def load_file(connection, load_id, kind, path, force):
     """Copy one file into its raw table, unless those exact bytes were loaded before."""
     digest = sha256_of(path)
-    if already_loaded(connection, digest) and not force:
+    if already_loaded(connection, kind, digest) and not force:
         record_file(connection, load_id, kind, path, digest, 0, "skipped_duplicate")
         return kind, path, "skipped_duplicate", 0
     line_count = insert_lines(connection, load_id, kind, path)
@@ -250,7 +252,7 @@ def load_manifest(connection, load_id, path, force):
         print(warning, file=sys.stderr)
         return None
     digest = sha256_of(path)
-    if already_loaded(connection, digest) and not force:
+    if already_loaded(connection, "manifest", digest) and not force:
         # line_count stays 0 for the manifest: it contributes settings, not raw rows.
         record_file(connection, load_id, "manifest", path, digest, 0, "skipped_duplicate")
         return "manifest", path, "skipped_duplicate", 0
