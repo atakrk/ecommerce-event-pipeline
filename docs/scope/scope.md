@@ -46,7 +46,7 @@ Move the repo onto the stack decided in spec 0001 (Python 3.12, uv, Ruff, pytest
 spec [0001](../specs/0001-pipeline-stack-architecture/index.md) · from spec 0001 · code in `pyproject.toml`, `transform/`, `tests/`, `.github/workflows/`
 - [x] Decide the stack (spec): `/architect stack & architecture`
 - [x] Scaffold from the decision: `/develop stack and architecture`
-- [ ] Verify it: `/check verify stack and architecture`
+- [x] Verify it: `/check verify stack and architecture`
 - [ ] Test it: `/test stack and architecture`
 
 ### 1. Event and reference data ingestion · needs a decision

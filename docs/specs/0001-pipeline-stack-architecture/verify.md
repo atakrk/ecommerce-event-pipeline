@@ -10,7 +10,7 @@ _Spec 0001 is decision only and has no `AC-N` ids, so these steps come from the 
 - [x] `make lint` → `ruff check` and `ruff format --check` both pass → DW-3
 - [x] `make test` → every pytest test passes → DW-3
 - [x] `uv run pre-commit run --all-files` → both Ruff hooks pass → DW-3
-- [ ] Push the branch or open a PR → the `CI` workflow in GitHub Actions runs `make check` and goes green → DW-3
+- [x] Push the branch or open a PR → the `CI` workflow in GitHub Actions runs `make check` and goes green → DW-3
 - [x] Close anything holding `data/warehouse.duckdb`, then `make dbt-build` → `dbt deps` installs `dbt_utils` at the locked version, `dbt build` exits 0 with only the expected "Nothing to do" warning → DW-4
 - [x] `DBT_DUCKDB_PATH="$PWD/data/warehouse.duckdb" uv run dbt debug --project-dir transform --profiles-dir transform` → connection OK and `path` is the absolute `data/warehouse.duckdb`, not a second file elsewhere → DW-4
 - [x] `make check` → `data/*.jsonl` are unchanged afterwards (the seeded dataset goes to a temp folder) → DW-3, DW-4
