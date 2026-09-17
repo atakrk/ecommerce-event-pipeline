@@ -10,3 +10,6 @@ __pycache__/
 # Generated data — reproducible from config.yaml + seed
 data/*
 !data/.gitkeep
+
+# Agent research cache (local notes, not project docs)
+docs/.agent-cache/
