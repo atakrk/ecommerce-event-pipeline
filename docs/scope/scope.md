@@ -60,7 +60,7 @@ spec [0002](../specs/0002-event-reference-data-ingestion/index.md) · code in `p
   - [x] Loader test suite: unit tests plus end to end loads against a temporary warehouse (AC-1 to AC-8)
   - [x] dbt models: the `raw` source, the three staging models, `marts.fct_events`, and their tests (AC-4, AC-9, AC-10)
   - [x] `make pipeline` and CI: load then build, with `make check` using a temporary warehouse (AC-11)
-- [ ] Verify it: `/check verify event and reference data ingestion`
+- [x] Verify it: `/check verify event and reference data ingestion`
 - [ ] Test it: `/test event and reference data ingestion`
 
 ### 2. Schema validation on ingest · needs a decision
