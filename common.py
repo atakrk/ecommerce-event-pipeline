@@ -113,6 +113,25 @@ def write_jsonl(path, records):
         raise
 
 
+def write_json(path, payload):
+    """Write one JSON object atomically, the single-object counterpart to write_jsonl.
+
+    The serialization is fixed on purpose: insertion order, two-space indent, one
+    trailing newline. The same settings therefore always produce the same bytes.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def print_distribution(title, values):
     counts = Counter(values)
     total = sum(counts.values())

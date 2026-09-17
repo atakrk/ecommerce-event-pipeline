@@ -2,6 +2,7 @@ seed: 42
 
 paths:
   data_dir: data
+  warehouse: data/warehouse.duckdb   # DBT_DUCKDB_PATH and --database override this
 
 users:
   count: 10000

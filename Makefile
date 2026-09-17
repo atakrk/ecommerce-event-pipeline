@@ -8,8 +8,8 @@ export DBT_DUCKDB_PATH := $(CURDIR)/data/warehouse.duckdb
 # Sessions for the small seeded dataset `make check` and CI generate.
 CHECK_SESSIONS ?= 2000
 
-.PHONY: sync reference reference-force events verify dbt-deps dbt-build lint test check \
-	clean-data clean-warehouse
+.PHONY: sync reference reference-force events verify load pipeline dbt-deps dbt-build \
+	lint test check clean-data clean-warehouse
 
 # Installs Python 3.12 and the locked dependencies into .venv.
 sync:
@@ -32,6 +32,11 @@ events:
 # Reports the observed funnel and fails on any structural problem.
 verify:
 	$(RUN) python verify.py $(ARGS)
+
+# Loads the generated files into raw.* — a file already loaded is skipped, so this is
+# safe to repeat. Pass loader options through, e.g. `make load ARGS="--force"`.
+load:
+	$(RUN) python -m pipeline.load $(ARGS)
 
 dbt-deps:
 	$(DBT) deps $(DBT_ARGS)
