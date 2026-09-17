@@ -83,16 +83,22 @@ META_DDL = (
 # One statement per file: the text never passes through Python, only its hash does.
 # `generate_subscripts` numbers the split before empty lines are dropped, so a line
 # number always points at the real line in the file.
+# The filter runs on the stored value, not the raw split element: a blank line in a
+# CRLF file arrives as a lone `\r` and would otherwise be kept as an empty string.
+# DuckDB's one argument `trim` strips spaces only, so the blank set is spelled out.
 INSERT_LINES = """
 insert into raw.{kind} (load_id, source_file, line_number, raw_line)
-select ?, ?, line_number, rtrim(line, chr(13))
+select ?, ?, line_number, raw_line
 from (
-    select
-        unnest(str_split(content, chr(10))) as line,
-        generate_subscripts(str_split(content, chr(10)), 1) as line_number
-    from read_text(?)
+    select rtrim(line, chr(13)) as raw_line, line_number
+    from (
+        select
+            unnest(str_split(content, chr(10))) as line,
+            generate_subscripts(str_split(content, chr(10)), 1) as line_number
+        from read_text(?)
+    )
 )
-where line <> ''
+where trim(raw_line, chr(32) || chr(9)) <> ''
 """
 
 
@@ -332,11 +338,18 @@ def main(argv=None):
         return 2
 
     try:
-        create_objects(connection, [kind for kind, _ in inputs])
-        # Last, because a DuckDB sequence value is never rolled back: taking it before
-        # the checks above would burn a load_id with no record that it ever existed.
-        load_id = connection.execute("select nextval('meta.load_id_seq')").fetchone()[0]
-        begin_run(connection, load_id)
+        try:
+            create_objects(connection, [kind for kind, _ in inputs])
+            # Last, because a DuckDB sequence value is never rolled back: taking it
+            # before the checks above would burn a load_id with no record that it ever
+            # existed.
+            load_id = connection.execute("select nextval('meta.load_id_seq')").fetchone()[0]
+            begin_run(connection, load_id)
+        except Exception as error:
+            # No transaction is open yet, so there is nothing to roll back and no run
+            # row to mark failed. Still an `error:` line, like every other exit here.
+            print(f"error: could not prepare the warehouse: {error}", file=sys.stderr)
+            return 1
 
         try:
             results, total = load_all(connection, load_id, inputs, manifest, config, args.force)

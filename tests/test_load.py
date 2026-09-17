@@ -189,6 +189,34 @@ def test_line_numbers_follow_the_file_even_across_blank_lines(config_path, wareh
     assert rows == [(1, '{"event_id": "E1"}'), (3, '{"event_id": "E2"}')]
 
 
+def test_a_blank_line_is_dropped_whatever_it_is_made_of(config_path, warehouse, data_dir):
+    # A blank line in a CRLF file arrives as a lone \r, so filtering the raw split
+    # element rather than the stored value used to keep it as an empty raw_line.
+    (data_dir / "events.jsonl").write_text(
+        '{"event_id": "E1"}\r\n\r\n{"event_id": "E2"}\r\n   \n\t\n{"event_id": "E3"}\n', "utf-8"
+    )
+
+    load(config_path, warehouse)
+
+    rows = query(warehouse, "select line_number, raw_line from raw.events order by 1")
+    # Lines 2, 4 and 5 hold nothing but blanks; the numbers still point at the real file.
+    assert rows == [
+        (1, '{"event_id": "E1"}'),
+        (3, '{"event_id": "E2"}'),
+        (6, '{"event_id": "E3"}'),
+    ]
+
+
+def test_indented_content_keeps_its_leading_whitespace(config_path, warehouse, data_dir):
+    # Only a line that is entirely blank goes; a line with content is stored untouched
+    # apart from its trailing carriage return.
+    (data_dir / "events.jsonl").write_text('  {"event_id": "E1"}\r\n', "utf-8")
+
+    load(config_path, warehouse)
+
+    assert query(warehouse, "select raw_line from raw.events") == [('  {"event_id": "E1"}',)]
+
+
 def test_a_second_run_loads_nothing_but_still_records_itself(config_path, warehouse):
     load(config_path, warehouse)
     assert load(config_path, warehouse) == 0
@@ -283,6 +311,23 @@ def test_a_manifest_is_stored_beside_the_config_settings(config_path, warehouse,
     assert query(warehouse, "select status from meta.load_files where file_kind = 'manifest'") == [
         ("loaded",)
     ]
+
+
+def test_a_failure_before_the_run_starts_is_named_not_a_traceback(
+    config_path, warehouse, monkeypatch, capsys
+):
+    import pipeline.load as loader
+
+    def explode(*_args, **_kwargs):
+        raise RuntimeError("ddl on fire")
+
+    monkeypatch.setattr(loader, "begin_run", explode)
+
+    # No transaction is open this early, so there is no run row to mark failed; what
+    # matters is that the module's `error:` contract holds instead of a raw traceback.
+    assert load(config_path, warehouse) == 1
+    assert "error: could not prepare the warehouse: ddl on fire" in capsys.readouterr().err
+    assert query(warehouse, "select count(*) from meta.load_runs") == [(0,)]
 
 
 def test_a_failed_run_is_recorded_and_leaves_no_data(config_path, warehouse, monkeypatch):
