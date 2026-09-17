@@ -1,0 +1,21 @@
+# dbt project for the warehouse layers after raw (spec 0001).
+# Run it through Make, which exports DBT_DUCKDB_PATH:
+#
+#     make dbt-build
+name: ecommerce_event_pipeline
+version: "0.1.0"
+config-version: 2
+require-dbt-version: [">=1.12.0", "<1.13.0"]
+
+profile: ecommerce_event_pipeline
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - target
+  - dbt_packages

@@ -1,0 +1,11 @@
+# Local DuckDB warehouse, no secrets. Make exports DBT_DUCKDB_PATH as an absolute
+# path so dbt never creates a second, empty warehouse when run from another folder.
+ecommerce_event_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', 'data/warehouse.duckdb') }}"
+      threads: 4
+      settings:
+        TimeZone: UTC
