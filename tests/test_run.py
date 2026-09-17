@@ -182,6 +182,58 @@ def test_main_is_byte_identical_across_runs(tmp_path, capsys):
     assert first == second
 
 
+def test_the_manifest_describes_the_run_that_produced_the_events(tmp_path, capsys):
+    write_reference(tmp_path)
+    config_path = write_config(tmp_path)
+    manifest_path = tmp_path / "events.manifest.json"
+
+    main(["--config", config_path, "--sessions", "12", "--manifest", str(manifest_path)])
+
+    events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["seed"] == 42
+    assert manifest["sessions"] == 12
+    assert manifest["start"] == "2026-09-01T00:00:00Z"
+    assert manifest["window_hours"] == 24
+    assert manifest["funnel"] == FUNNEL
+    assert manifest["sessions_written"] == 12
+    assert manifest["events_written"] == len(events)
+
+
+def test_the_manifest_is_byte_identical_across_runs(tmp_path):
+    write_reference(tmp_path)
+    config_path = write_config(tmp_path)
+    first, second = tmp_path / "first.json", tmp_path / "second.json"
+
+    main(["--config", config_path, "--sessions", "20", "--manifest", str(first)])
+    main(["--config", config_path, "--sessions", "20", "--manifest", str(second)])
+
+    assert first.read_bytes() == second.read_bytes()
+
+
+def test_no_manifest_is_written_unless_the_option_is_passed(tmp_path):
+    write_reference(tmp_path)
+    config_path = write_config(tmp_path)
+
+    main(["--config", config_path, "--sessions", "5"])
+
+    assert not (tmp_path / "events.manifest.json").exists()
+
+
+def test_an_unwritable_manifest_path_fails_before_any_events_are_written(tmp_path, capsys):
+    write_reference(tmp_path)
+    config_path = write_config(tmp_path)
+    unwritable = tmp_path / "events.jsonl" / "manifest.json"
+    (tmp_path / "events.jsonl").write_text("", encoding="utf-8")
+
+    exit_code = main(["--config", config_path, "--sessions", "5", "--manifest", str(unwritable)])
+
+    out, err = capsys.readouterr()
+    assert exit_code == 2
+    assert out == ""
+    assert f"cannot write the manifest to {unwritable}" in err
+
+
 def test_main_exits_2_when_reference_data_is_missing(tmp_path, capsys):
     config_path = write_config(tmp_path)
 

@@ -329,22 +329,26 @@ def main(argv=None):
         print(f"error: {error}", file=sys.stderr)
         return 2
 
-    create_objects(connection, [kind for kind, _ in inputs])
-    # Last, because a DuckDB sequence value is never rolled back: taking it before the
-    # checks above would burn a load_id with no record that it ever existed.
-    load_id = connection.execute("select nextval('meta.load_id_seq')").fetchone()[0]
-    begin_run(connection, load_id)
-
     try:
-        results, total_rows = load_all(connection, load_id, inputs, manifest, config, args.force)
-    except Exception as error:
-        connection.execute("rollback")
-        fail_run(connection, load_id, str(error))
-        print(f"error: load {load_id} failed and was rolled back: {error}", file=sys.stderr)
-        return 1
+        create_objects(connection, [kind for kind, _ in inputs])
+        # Last, because a DuckDB sequence value is never rolled back: taking it before
+        # the checks above would burn a load_id with no record that it ever existed.
+        load_id = connection.execute("select nextval('meta.load_id_seq')").fetchone()[0]
+        begin_run(connection, load_id)
 
-    print_summary(results, total_rows, load_id, sys.stderr)
-    return 0
+        try:
+            results, total = load_all(connection, load_id, inputs, manifest, config, args.force)
+        except Exception as error:
+            connection.execute("rollback")
+            fail_run(connection, load_id, str(error))
+            print(f"error: load {load_id} failed and was rolled back: {error}", file=sys.stderr)
+            return 1
+
+        print_summary(results, total, load_id, sys.stderr)
+        return 0
+    finally:
+        # Releases DuckDB's writer lock, so `make pipeline` can run dbt straight after.
+        connection.close()
 
 
 if __name__ == "__main__":

@@ -24,6 +24,9 @@ GOLDEN_SHA256 = {
     "users.jsonl": "6ffe2ad2d78952daae4ff2ac769c6f5bd83b2b054e5471c534083f1ce7f04373",
     "products.jsonl": "1a80f4a19d4619c9be76ddf6292162d0b7a133af82bd899136ba314d0154d4d1",
     "events.jsonl": "38590aef79eef93d311f6c33acd8bc84cdc9588fc6591289f5d094a42fd58957",
+    # The manifest is pinned for the same reason: it is the record of what produced
+    # the events, so a run that is reproducible must describe itself identically too.
+    "events.manifest.json": "ba27f7c81e4fdb33be7bf93277fce044ec34e8f9c75bba65ca4e47c5aacc6356",
 }
 
 
@@ -55,6 +58,8 @@ def generate(data_dir):
             str(config_path),
             "--sessions",
             SESSIONS,
+            "--manifest",
+            str(data_dir / "events.manifest.json"),
             stdout=events,
         )
     return config_path

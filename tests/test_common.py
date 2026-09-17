@@ -17,6 +17,7 @@ from common import (
     read_jsonl,
     rng_for,
     weighted_choice,
+    write_json,
     write_jsonl,
 )
 
@@ -79,6 +80,24 @@ def test_write_jsonl_removes_tmp_file_on_failure(tmp_path):
 
     with pytest.raises(RuntimeError):
         write_jsonl(path, broken())
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_write_json_has_a_fixed_serialization(tmp_path):
+    path = tmp_path / "out" / "manifest.json"
+
+    write_json(path, {"seed": 42, "city": "İzmir"})
+
+    # Key order, indent and the trailing newline are all part of the byte guarantee.
+    assert path.read_text(encoding="utf-8") == '{\n  "seed": 42,\n  "city": "İzmir"\n}\n'
+
+
+def test_write_json_leaves_no_tmp_file_behind(tmp_path):
+    path = tmp_path / "manifest.json"
+
+    with pytest.raises(TypeError):
+        write_json(path, {"when": object()})
 
     assert list(tmp_path.iterdir()) == []
 
