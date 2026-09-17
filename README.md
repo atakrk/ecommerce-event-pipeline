@@ -10,35 +10,45 @@ A data pipeline that synthetically generates user behavior events for an e-comme
 
 ## Setup
 
-Requirements: Python 3.9+
+Requirements: [uv](https://docs.astral.sh/uv/). It installs Python 3.12 and the locked dependencies for you.
 
 ```bash
-make venv        # creates .venv and installs dependencies
-make reference   # generates data/users.jsonl and data/products.jsonl
-make events      # generates data/events.jsonl
+uv sync                          # creates .venv with Python 3.12 and the locked dependencies
+uv run pre-commit install        # optional: runs Ruff on every commit
+make reference                   # generates data/users.jsonl and data/products.jsonl
+make events                      # generates data/events.jsonl
 ```
 
 Other commands:
 
 | Command                | What it does                                       |
 | ---------------------- | -------------------------------------------------- |
+| `make sync`            | Installs exactly what `uv.lock` pins               |
 | `make reference`       | Generates reference data; skips files that exist   |
 | `make reference-force` | Regenerates, overwriting existing files            |
 | `make events`          | Generates `data/events.jsonl` from the reference data |
 | `make verify`          | Checks `data/events.jsonl` against the configured funnel |
+| `make lint`            | Ruff lint and format check                         |
+| `make test`            | Runs the pytest suite                              |
+| `make dbt-build`       | Installs dbt packages and runs `dbt build` against `data/warehouse.duckdb` |
+| `make check`           | Everything CI runs: lint, tests, a small seeded generate + verify, dbt build |
 | `make clean-data`      | Deletes `data/*.jsonl`                             |
+| `make clean-warehouse` | Deletes `data/warehouse.duckdb` and all load history |
 
 The scripts can also be run directly:
 
 ```bash
-.venv/bin/python -m reference.generate_users [--config config.yaml] [--force]
-.venv/bin/python -m reference.generate_products [--config config.yaml] [--force]
+uv run python -m reference.generate_users [--config config.yaml] [--force]
+uv run python -m reference.generate_products [--config config.yaml] [--force]
 
-.venv/bin/python -m generator.run [--config config.yaml] [--sessions 1000] \
-                                  [--start 2026-09-01T00:00:00Z] [--seed N] > data/events.jsonl
+uv run python -m generator.run [--config config.yaml] [--sessions 1000] \
+                               [--start 2026-09-01T00:00:00Z] [--seed N] > data/events.jsonl
 
-.venv/bin/python verify.py [--config config.yaml] [data/events.jsonl]
+uv run python verify.py [--config config.yaml] [data/events.jsonl]
 ```
+
+DuckDB allows one writing process at a time. Close anything holding `data/warehouse.duckdb` open
+(a DuckDB MCP server, the DuckDB UI) before `make dbt-build` or `make check`.
 
 `--seed` overrides the config seed for one-off experiments; the config value stays the default,
 so a bare run is reproducible. The event generator writes to **stdout** and its run summary to
