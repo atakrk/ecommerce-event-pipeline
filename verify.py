@@ -6,6 +6,7 @@ The funnel percentages are a report, not a verdict: they drift with sample size,
 which is the point of measuring them. The structural checks below are pass/fail,
 and any failure exits non-zero.
 """
+
 import sys
 from collections import Counter, defaultdict
 
@@ -74,7 +75,7 @@ def check_unique_event_ids(usable):
 def check_ordering(usable):
     """The file must be chronological, exactly as a real stream arrives."""
     failures = []
-    for line_number, (earlier, later) in enumerate(zip(usable, usable[1:]), start=2):
+    for line_number, (earlier, later) in enumerate(zip(usable, usable[1:], strict=False), start=2):
         if later[0] < earlier[0]:
             failures.append(
                 f"line {line_number}: {later[1]['event_time']} follows {earlier[1]['event_time']}"
@@ -98,7 +99,9 @@ def check_sessions(usable):
 
         page_views = types.count(FIRST_EVENT_TYPE)
         if page_views != 1:
-            page_view_failures.append(f"session {session_id} has {page_views} {FIRST_EVENT_TYPE} events")
+            page_view_failures.append(
+                f"session {session_id} has {page_views} {FIRST_EVENT_TYPE} events"
+            )
         elif types[0] != FIRST_EVENT_TYPE:
             page_view_failures.append(
                 f"session {session_id} starts with {types[0]}, not {FIRST_EVENT_TYPE}"
@@ -110,12 +113,15 @@ def check_sessions(usable):
                 f"session {session_id} is {' -> '.join(types)}, expected {' -> '.join(expected)}"
             )
 
-        products = {event["product_id"] for _, event in entries if event["event_type"] != FIRST_EVENT_TYPE}
+        products = {
+            event["product_id"] for _, event in entries if event["event_type"] != FIRST_EVENT_TYPE
+        }
         if None in products:
             product_failures.append(f"session {session_id} has an event with no product_id")
         elif len(products) > 1:
+            names = ", ".join(sorted(products))
             product_failures.append(
-                f"session {session_id} carries {len(products)} products: {', '.join(sorted(products))}"
+                f"session {session_id} carries {len(products)} products: {names}"
             )
 
     return len(sessions), page_view_failures, stage_failures, product_failures

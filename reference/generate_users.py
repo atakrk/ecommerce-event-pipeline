@@ -1,5 +1,6 @@
 """Generate user reference data -> data/users.jsonl"""
-from datetime import datetime, timedelta, timezone
+
+from datetime import UTC, datetime, timedelta
 
 from common import (
     base_arg_parser,
@@ -17,7 +18,7 @@ OUTPUT_FILE = "users.jsonl"
 
 def _parse_date(value):
     # YAML turns unquoted dates into date objects; str() handles both cases.
-    return datetime.fromisoformat(str(value)).replace(tzinfo=timezone.utc)
+    return datetime.fromisoformat(str(value)).replace(tzinfo=UTC)
 
 
 def generate_users(config):
@@ -28,7 +29,8 @@ def generate_users(config):
     country_weights = {code: c["weight"] for code, c in countries.items()}
 
     start = _parse_date(users_cfg["created_at_range"]["start"])
-    end = _parse_date(users_cfg["created_at_range"]["end"]) + timedelta(days=1)  # end date is inclusive
+    # The end date is inclusive, so the range runs to the start of the next day.
+    end = _parse_date(users_cfg["created_at_range"]["end"]) + timedelta(days=1)
     last_second = int((end - start).total_seconds()) - 1
 
     for i in range(1, users_cfg["count"] + 1):

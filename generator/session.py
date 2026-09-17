@@ -1,4 +1,5 @@
 """Build the events of a single session (one visit)."""
+
 import uuid
 from datetime import timedelta
 

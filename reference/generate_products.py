@@ -1,4 +1,5 @@
 """Generate product reference data -> data/products.jsonl"""
+
 import math
 import statistics
 
