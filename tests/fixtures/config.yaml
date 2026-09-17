@@ -1,0 +1,34 @@
+# Small config for tests: same shape as config.yaml, sized to run in well under a second.
+seed: 42
+
+paths:
+  data_dir: data
+
+users:
+  count: 200
+  created_at_range: {start: "2024-01-01", end: "2025-12-31"}
+  device_types: {mobile: 0.60, desktop: 0.30, tablet: 0.10}
+  countries:
+    TR: {weight: 0.40, cities: [Istanbul, Ankara, Izmir, Bursa, Antalya]}
+    DE: {weight: 0.25, cities: [Berlin, Munich, Hamburg, Cologne]}
+    GB: {weight: 0.20, cities: [London, Manchester, Birmingham]}
+    NL: {weight: 0.15, cities: [Amsterdam, Rotterdam, Utrecht]}
+
+products:
+  count: 50
+  categories:
+    electronics: {weight: 0.20, price_min: 50, price_max: 2000}
+    fashion:     {weight: 0.30, price_min: 10, price_max: 300}
+    home:        {weight: 0.20, price_min: 15, price_max: 800}
+    beauty:      {weight: 0.15, price_min: 5,  price_max: 150}
+    sports:      {weight: 0.15, price_min: 10, price_max: 600}
+
+simulation:
+  start: "2026-09-01T00:00:00Z"
+  window_hours: 24
+
+funnel:
+  page_view_to_product_view: 0.60
+  product_view_to_add_to_cart: 0.15
+  add_to_cart_to_checkout: 0.50
+  checkout_to_purchase: 0.60

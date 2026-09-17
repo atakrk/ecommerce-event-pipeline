@@ -13,3 +13,12 @@ data/*
 
 # Agent research cache (local notes, not project docs)
 docs/.agent-cache/
+
+# Tool caches
+.ruff_cache/
+.pytest_cache/
+
+# dbt build output and installed packages (package-lock.yml is committed)
+transform/target/
+transform/dbt_packages/
+transform/logs/

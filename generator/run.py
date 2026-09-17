@@ -6,6 +6,7 @@ Events go to stdout so the stream can be redirected straight into a file:
 
 Everything diagnostic goes to stderr, which keeps the redirected data clean.
 """
+
 import sys
 from collections import Counter, namedtuple
 from datetime import timedelta
@@ -69,7 +70,7 @@ def resolve_settings(config, args):
         source = "--start" if args.start is not None else "simulation.start"
         raise ConfigError(
             f"{source} must be an ISO 8601 UTC instant, got {start_value!r}"
-        )
+        ) from None
 
     window_hours = simulation.get("window_hours", DEFAULT_WINDOW_HOURS)
     if isinstance(window_hours, bool) or not isinstance(window_hours, (int, float)):
@@ -83,9 +84,7 @@ def resolve_settings(config, args):
             f"simulation.window_hours must cover at least one second, got {window_hours!r}"
         )
 
-    return Settings(
-        sessions=args.sessions, start=start, window_seconds=window_seconds, rates=rates
-    )
+    return Settings(sessions=args.sessions, start=start, window_seconds=window_seconds, rates=rates)
 
 
 def load_ids(config, filename, key):
