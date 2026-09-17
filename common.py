@@ -1,11 +1,12 @@
 """Shared helpers for the reference data and event generators."""
+
 import argparse
 import json
 import os
 import random
 import sys
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -25,16 +26,12 @@ class ConfigError(ValueError):
 def parse_instant(value):
     """Parse an ISO 8601 UTC instant. Raises ValueError on anything unparseable.
 
-    datetime.fromisoformat() does not accept the "Z" suffix before Python 3.11,
-    so it is translated here.
+    A value without an offset is taken as UTC; any other offset is converted to UTC.
     """
-    text = str(value).strip()
-    if text.endswith(("Z", "z")):
-        text = text[:-1] + "+00:00"
-    parsed = datetime.fromisoformat(text)
+    parsed = datetime.fromisoformat(str(value).strip())
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def format_instant(moment):
@@ -49,7 +46,9 @@ def base_arg_parser(description, force=False):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="Path to config.yaml")
     if force:
-        parser.add_argument("--force", action="store_true", help="Overwrite the existing output file")
+        parser.add_argument(
+            "--force", action="store_true", help="Overwrite the existing output file"
+        )
     return parser
 
 
@@ -99,7 +98,10 @@ def write_jsonl_stream(stream, records):
 
 
 def write_jsonl(path, records):
-    """Write to a .tmp file first, then move it into place atomically so no partial file is left behind."""
+    """Write to a .tmp file first, then move it into place atomically.
+
+    No partial file is left behind if generation fails partway.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     try:
