@@ -1,0 +1,51 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: >
+      The loader's landing zone (`pipeline/load.py`, spec 0002). One row per non-empty
+      line of a generated file, kept exactly as it arrived. Nothing here is ever updated
+      or deleted; every correction happens downstream.
+    tables:
+      - name: events
+        description: Untouched lines of `events.jsonl`, one per event.
+        columns: &raw_columns
+          - name: load_id
+            description: The run that wrote this row, from `meta.load_runs`.
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+          - name: line_number
+            description: 1-based position in the file, counted before blank lines were dropped.
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+          - name: raw_line
+            description: The JSON text of the line, with only a trailing carriage return removed.
+            data_tests:
+              - not_null:
+                  config:
+                    severity: warn
+          - name: source_file
+            description: Absolute path of the file this line came from.
+        data_tests: &raw_grain
+          # Raw tests warn rather than fail: raw records what arrived, and judging it
+          # is the staging layer's job (and feature 2's quarantine).
+          - dbt_utils.unique_combination_of_columns:
+              arguments:
+                combination_of_columns: [load_id, line_number]
+              config:
+                severity: warn
+
+      - name: users
+        description: Untouched lines of `users.jsonl`, one per user.
+        columns: *raw_columns
+        data_tests: *raw_grain
+
+      - name: products
+        description: Untouched lines of `products.jsonl`, one per product.
+        columns: *raw_columns
+        data_tests: *raw_grain

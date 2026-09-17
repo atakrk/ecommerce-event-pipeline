@@ -1,0 +1,81 @@
+version: 2
+
+models:
+  - name: fct_events
+    description: >
+      Event grain: exactly one row per `event_id` across every load, with the user and
+      product attributes that were current as of that event's load. This is the table
+      the funnel report (feature 3) is built on.
+    columns:
+      - name: event_id
+        description: The event's identifier; the grain of this table.
+        data_tests:
+          - unique
+          - not_null
+      - name: session_id
+        description: The visit this event belongs to.
+        data_tests:
+          - not_null
+      - name: user_id
+        description: The user who produced the event.
+        data_tests:
+          - not_null
+          # Warn, not error: an event whose user never arrived is kept with null user
+          # attributes (AC-9), and a missing reference row is a data question, not a
+          # broken model.
+          - relationships:
+              arguments:
+                to: ref('stg_raw__users')
+                field: user_id
+              config:
+                severity: warn
+      - name: event_type
+        description: The funnel stage this event represents.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [PAGE_VIEW, PRODUCT_VIEW, ADD_TO_CART, CHECKOUT, PURCHASE]
+      - name: event_time
+        description: When the event happened in simulated time, UTC.
+        data_tests:
+          - not_null
+      - name: product_id
+        description: >
+          The product in view. Null by design for the stages that carry no product,
+          so this column is deliberately not tested for null.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_raw__products')
+                field: product_id
+              config:
+                severity: warn
+      - name: load_id
+        description: The load run the surviving copy of this event came from.
+        data_tests:
+          - not_null
+      - name: user_country
+        description: The user's country as of this event's load; null when the user is unknown.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [TR, DE, GB, NL]
+      - name: user_city
+        description: The user's city as of this event's load.
+      - name: user_device_type
+        description: The user's device as of this event's load.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [mobile, desktop, tablet]
+      - name: user_created_at
+        description: When the user account was created, UTC.
+      - name: product_category
+        description: The product's category as of this event's load; null when there is no product.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [electronics, fashion, home, beauty, sports]
+      - name: product_price
+        description: The product's list price as of this event's load.

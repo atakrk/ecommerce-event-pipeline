@@ -1,0 +1,109 @@
+version: 2
+
+# The accepted values below repeat `generator.session.EVENT_TYPES` and the country,
+# device and category keys of `config.yaml`. SQL cannot import them, so they can drift:
+# spec 0002's follow-up tracks reading them from `meta.run_config` instead.
+
+models:
+  - name: stg_raw__events
+    description: >
+      One row per raw event line that parsed and cast. Not unique on `event_id` on
+      purpose: staging stays one to one with raw so the coverage test below has a
+      single meaning. Uniqueness is guaranteed and tested in `fct_events`.
+    columns:
+      - name: event_id
+        description: The generator's event identifier, unique per event but repeated across reloads.
+        data_tests:
+          - not_null
+      - name: session_id
+        description: The visit this event belongs to.
+        data_tests:
+          - not_null
+      - name: user_id
+        description: The user who produced the event; resolved against `stg_raw__users` downstream.
+        data_tests:
+          - not_null
+      - name: event_type
+        description: The funnel stage this event represents.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [PAGE_VIEW, PRODUCT_VIEW, ADD_TO_CART, CHECKOUT, PURCHASE]
+      - name: event_time
+        description: When the event happened in simulated time, UTC.
+        data_tests:
+          - not_null
+      - name: product_id
+        description: The product in view; null for the stages that carry no product.
+      - name: load_id
+        description: The load run that brought this line in.
+        data_tests:
+          - not_null
+      - name: line_number
+        description: Position in the source file, kept so a row can be traced back to its line.
+        data_tests:
+          - not_null
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [load_id, line_number]
+
+  - name: stg_raw__users
+    description: >
+      One row per user per load. Every loaded version is kept, so an event resolves the
+      version current as of its own load rather than the newest one.
+    columns:
+      - name: user_id
+        description: Reference key for a user.
+        data_tests:
+          - not_null
+      - name: country
+        description: ISO country code the user belongs to.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [TR, DE, GB, NL]
+      - name: city
+        description: City within the user's country.
+      - name: device_type
+        description: The device this user browses on.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [mobile, desktop, tablet]
+      - name: created_at
+        description: When the user account was created, UTC.
+      - name: load_id
+        description: The load run this version of the user arrived in.
+        data_tests:
+          - not_null
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [user_id, load_id]
+
+  - name: stg_raw__products
+    description: >
+      One row per product per load, on the same versioned grain as `stg_raw__users`.
+    columns:
+      - name: product_id
+        description: Reference key for a product.
+        data_tests:
+          - not_null
+      - name: category
+        description: The catalogue category the product sits in.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [electronics, fashion, home, beauty, sports]
+      - name: price
+        description: List price in the catalogue currency, two decimal places.
+      - name: load_id
+        description: The load run this version of the product arrived in.
+        data_tests:
+          - not_null
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [product_id, load_id]

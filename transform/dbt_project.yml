@@ -19,3 +19,13 @@ snapshot-paths: ["snapshots"]
 clean-targets:
   - target
   - dbt_packages
+
+# Every model is a table and covers every load (spec 0001): the warehouse is local
+# and small, and a table is what the DuckDB MCP server and the DuckDB UI can read.
+models:
+  ecommerce_event_pipeline:
+    +materialized: table
+    staging:
+      +schema: staging
+    marts:
+      +schema: marts
