@@ -303,10 +303,16 @@ def load_all(connection, load_id, inputs, manifest, config, force):
     return tuple(results), total_rows
 
 
+def describe(kind, status, line_count):
+    if status == "skipped_duplicate":
+        return "skipped, already loaded"
+    # The manifest contributes settings rather than raw rows, so it has no line count.
+    return "settings recorded" if kind == "manifest" else f"{line_count} lines"
+
+
 def print_summary(results, total_rows, load_id, stream):
     for kind, path, status, line_count in results:
-        loaded = f"{line_count} lines" if status == "loaded" else "skipped, already loaded"
-        print(f"  {kind:<9} {path}  {loaded}", file=stream)
+        print(f"  {kind:<9} {path}  {describe(kind, status, line_count)}", file=stream)
     print(f"total {total_rows} rows   load_id {load_id}", file=stream)
 
 

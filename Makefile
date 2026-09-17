@@ -24,10 +24,11 @@ reference-force:
 	$(RUN) python -m reference.generate_users --force
 	$(RUN) python -m reference.generate_products --force
 
-# Events go to stdout, so the target is just a redirect.
+# Events go to stdout, so the target is just a redirect. The manifest records the
+# settings this run used, and the loader stores it alongside the events.
 # Pass generator options through, e.g. `make events ARGS="--sessions 5000"`.
 events:
-	$(RUN) python -m generator.run $(ARGS) > data/events.jsonl
+	$(RUN) python -m generator.run --manifest data/events.manifest.json $(ARGS) > data/events.jsonl
 
 # Reports the observed funnel and fails on any structural problem.
 verify:
@@ -69,7 +70,7 @@ check: lint test
 	$(MAKE) dbt-build
 
 clean-data:
-	rm -f data/*.jsonl
+	rm -f data/*.jsonl data/events.manifest.json
 
 # Deletes all load history on purpose; it cannot be rebuilt from the JSONL files alone.
 clean-warehouse:

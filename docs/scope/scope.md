@@ -56,7 +56,7 @@ spec [0002](../specs/0002-event-reference-data-ingestion/index.md)
 - [x] Design it (spec): `/architect event and reference data ingestion`
 - [ ] Build it: `/develop event and reference data ingestion`
   - [x] Loader and `make load`: raw and meta tables, all three files, content hash skipping and `--force` (AC-1, AC-2, AC-3, AC-6, AC-7, AC-8)
-  - [ ] Generation manifest: `--manifest` on the generator, loaded into `meta.run_config` (AC-5)
+  - [x] Generation manifest: `--manifest` on the generator, loaded into `meta.run_config` (AC-5)
   - [ ] Loader test suite: unit tests plus end to end loads against a temporary warehouse (AC-1 to AC-8)
   - [ ] dbt models: the `raw` source, the three staging models, `marts.fct_events`, and their tests (AC-4, AC-9, AC-10)
   - [ ] `make pipeline` and CI: load then build, with `make check` using a temporary warehouse (AC-11)

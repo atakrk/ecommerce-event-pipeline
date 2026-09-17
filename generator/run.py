@@ -10,15 +10,18 @@ Everything diagnostic goes to stderr, which keeps the redirected data clean.
 import sys
 from collections import Counter, namedtuple
 from datetime import timedelta
+from pathlib import Path
 
 from common import (
     ConfigError,
     base_arg_parser,
+    format_instant,
     load_config,
     output_path,
     parse_instant,
     read_jsonl,
     rng_for,
+    write_json,
     write_jsonl_stream,
 )
 from generator.session import EVENT_TYPES, build_session, funnel_rates
@@ -39,6 +42,9 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--seed", type=int, help="Override the config seed, for one-off experiments"
+    )
+    parser.add_argument(
+        "--manifest", type=Path, help="Also write this run's effective settings to this path"
     )
     return parser.parse_args(argv)
 
@@ -128,6 +134,24 @@ def generate_events(config, settings, user_ids, product_ids):
     return events
 
 
+def build_manifest(config, settings, events):
+    """The settings this run actually used, plus what it produced.
+
+    Everything here is derived from the config and the arguments: no wall clock and
+    no environment, so the same seed and arguments give a byte-identical manifest.
+    The loader stores it beside config.yaml in `meta.run_config` (spec 0002).
+    """
+    return {
+        "seed": config["seed"],
+        "sessions": settings.sessions,
+        "start": format_instant(settings.start),
+        "window_hours": settings.window_seconds / 3600,
+        "funnel": dict(settings.rates),
+        "sessions_written": len({event["session_id"] for event in events}),
+        "events_written": len(events),
+    }
+
+
 def print_summary(events, settings, stream):
     """A convenience only: nothing here is needed to interpret the data itself."""
     counts = Counter(event["event_type"] for event in events)
@@ -150,6 +174,16 @@ def main(argv=None):
         return 2
 
     events = generate_events(config, settings, user_ids, product_ids)
+
+    # Written before the events themselves: an unwritable manifest path then fails
+    # while the redirected output file is still empty, rather than halfway through it.
+    if args.manifest is not None:
+        try:
+            write_json(args.manifest, build_manifest(config, settings, events))
+        except OSError as error:
+            print(f"error: cannot write the manifest to {args.manifest}: {error}", file=sys.stderr)
+            return 2
+
     write_jsonl_stream(sys.stdout, events)
     print_summary(events, settings, sys.stderr)
     return 0
